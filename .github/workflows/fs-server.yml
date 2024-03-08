@@ -19,7 +19,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker buildx create --use
-          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/shashwat5050/fs-server:latest -f .Dockerfile-fs-server .
+          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/shashwat5050/fs-server:latest -f Dockerfile-fs-server .
           echo ${{ secrets.GHCR_SECRET_TOKEN }} | docker login ghcr.io -u shashwat5050 --password-stdin
           docker push ghcr.io/shashwat5050/fs-server:latest
         env:
