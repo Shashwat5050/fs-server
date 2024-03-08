@@ -1,0 +1,18 @@
+syntax = "proto3";
+option go_package = "iceline-hosting.com/backend/proto/authorization";
+package authorization;
+
+import "jwt.proto";
+
+service Authorization {
+    rpc GetUserPermission(jwt.JWT) returns (UserPermission) {}
+}
+
+message UserPermission {
+    string Id = 1;
+    repeated Permission Permission = 2;
+}
+message Permission {
+    string Name = 1;
+    string Action = 2;
+}

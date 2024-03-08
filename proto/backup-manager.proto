@@ -1,0 +1,27 @@
+syntax = "proto3";
+option go_package = "iceline-hosting.com/backend/proto/backupmanager";
+package backupmanager;
+
+service BackupManager {
+    rpc CreateBackup(CreateBackupRequest) returns (CreateBackupResponse) {}
+    rpc RestoreBackup(RestoreBackupRequest) returns (RestoreBackupResponse) {}
+}
+
+message CreateBackupRequest {
+    string path = 1;
+}
+
+message CreateBackupResponse {
+    uint64 size = 1;
+    string name = 2;
+}
+
+message RestoreBackupRequest {
+    string name = 1;
+    string path = 2;
+}
+
+message RestoreBackupResponse {
+    bool success = 1;
+    string message = 2;
+}

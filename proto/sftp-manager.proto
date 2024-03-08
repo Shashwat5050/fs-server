@@ -1,0 +1,44 @@
+syntax = "proto3";
+option go_package = "iceline-hosting.com/backend/proto/fsmanager";
+package fsmanager;
+
+
+
+
+service SftpManager{
+    rpc ConnectToSFTP(SFTPConnectRequest) returns (SFTPConnectResponse) {}
+    rpc SFTPUploadFile(stream SFTPUploadFileRequest) returns (SFTPUploadFileResponse) {}
+    rpc SFTPDownloadFile(SFTPDownloadFileRequest) returns (stream SFTPDownloadFileResponse) {}
+}
+
+message SFTPConnectRequest {
+    string host = 1;
+    int32 port = 2;
+    string username = 3;
+    string password = 4;
+}
+
+message SFTPConnectResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+message SFTPUploadFileRequest {
+    string remote_path = 1;
+    string file_name = 2;
+    bytes data = 3;
+}
+
+message SFTPUploadFileResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+message SFTPDownloadFileRequest {
+    string remote_path = 1;
+    string file_name = 2;
+}
+
+message SFTPDownloadFileResponse {
+    bytes data = 1;
+}

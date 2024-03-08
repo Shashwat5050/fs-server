@@ -1,0 +1,14 @@
+version: "3.3"
+
+services:
+  fs-server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile-fs-server
+    container_name: fs-server
+    ports:
+        - "50000:50000"
+    env_file: "./fs-server/.env"
+
+
+  

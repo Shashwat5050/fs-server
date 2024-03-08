@@ -1,0 +1,14 @@
+syntax = "proto3";
+option go_package = "iceline-hosting.com/backend/proto/authentication";
+package authentication;
+
+import "jwt.proto";
+
+service Authentication {
+  rpc VerifyGrpc(jwt.JWT) returns (VerifiedState) {}
+  rpc RegenerateJwtGrpc(jwt.JWT) returns (jwt.JWT) {}
+}
+
+message VerifiedState {
+  bool state = 1;
+}
