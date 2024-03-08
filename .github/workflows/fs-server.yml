@@ -1,0 +1,26 @@
+name: Publish fs-server to GHCR
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and Push Docker Image
+        run: |
+          docker buildx create --use
+          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/shashwat5050/fs-server:latest -f ./Dockerfile-fs-server .
+          echo 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 | docker login ghcr.io -u shashwat5050 --password-stdin
+          docker push ghcr.io/shashwat5050/fs-server:latest
+        env:
+          DOCKER_CLI: docker
