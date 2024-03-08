@@ -20,7 +20,7 @@ jobs:
         run: |
           docker buildx create --use
           docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/shashwat5050/fs-server:latest -f Dockerfile-fs-server . --push
-          docker login ghcr.io -u shashwat5050 -p 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
+          docker login ghcr.io -u shashwat5050 -p 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
           docker push ghcr.io/shashwat5050/fs-server:latest
         env:
           DOCKER_CLI: docker
