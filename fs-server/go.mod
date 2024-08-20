@@ -7,7 +7,6 @@ replace iceline-hosting.com/backend/proto => ../proto
 replace iceline-hosting.com/core => ../core
 
 require (
-	github.com/joho/godotenv v1.5.1
 	github.com/pkg/sftp v1.13.6
 	github.com/stretchr/testify v1.8.1
 	github.com/uptrace/opentelemetry-go-extra/otelzap v0.1.17
