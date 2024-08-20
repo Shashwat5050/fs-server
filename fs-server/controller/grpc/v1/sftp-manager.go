@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"go.uber.org/zap"
-	sfp "iceline-hosting.com/backend/proto/sftp-manager"
+	sfp "iceline-hosting.com/backend/proto/fsmanager"
 )
 
 

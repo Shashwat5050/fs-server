@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	bpb "iceline-hosting.com/backend/proto/backupmanager"
 	fpb "iceline-hosting.com/backend/proto/fsmanager"
-	sfpb "iceline-hosting.com/backend/proto/sftp-manager"
+	sfpb "iceline-hosting.com/backend/proto/fsmanager"
 )
 
 type fsUsecase interface {
@@ -28,6 +28,8 @@ type fsUsecase interface {
 	CopyFile(path, name, newPath, newName string) error
 	CompressFile(ctx context.Context, path, name string) error
 	BulkCompressFile(ctx context.Context, path string, filenames []string) (string, error)
+	GetFileData(path string) (string, error)
+	SetFileData(path string, data []byte) error
 }
 
 type backupUsecase interface {
@@ -35,8 +37,8 @@ type backupUsecase interface {
 	RestoreFile(ctx context.Context, path, name string) error
 }
 
-type sftpUseCase interface{
-	ConnectToSFTP(ctx context.Context,host,password string,port int32,username string)(string,error)
+type sftpUseCase interface {
+	ConnectToSFTP(ctx context.Context, host, password string, port int32, username string) (string, error)
 }
 
 type usecase interface {
@@ -96,7 +98,7 @@ func (c *controller) Run() error {
 	bpb.RegisterBackupManagerServer(c.server, c)
 	c.log.Info("registered backup manager server")
 
-	sfpb.RegisterSftpManagerServer(c.server,c)
+	sfpb.RegisterSftpManagerServer(c.server, c)
 	c.log.Info("registered sftp manager server")
 
 	c.log.Info("started listening", zap.String("port", c.port))

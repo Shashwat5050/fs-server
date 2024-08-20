@@ -289,3 +289,30 @@ func (c *controller) BulkCompressFile(ctx context.Context, req *fpb.BulkCompress
 
 	return &emptypb.Empty{}, nil
 }
+
+
+func (c *controller) GetFileData(ctx context.Context, req *fpb.GetFileDataRequest) (*fpb.GetFileDataResponse, error) {
+	c.log.Info("GetFileStat", zap.String("path", req.Path))
+
+	data, err := c.use.GetFileData(req.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &fpb.GetFileDataResponse{
+		Data: string(data),
+	}, nil
+}
+
+func (c *controller) SetFileData(ctx context.Context, req *fpb.SetFileDataRequest) (*fpb.SetFileDataResponse, error) {
+	c.log.Info("SetFileStat", zap.String("path", req.Path))
+
+	err := c.use.SetFileData(req.Path,[]byte(req.Data))
+	if err != nil {
+		return &fpb.SetFileDataResponse{IsSet: false}, err
+	}
+
+	return &fpb.SetFileDataResponse{
+		IsSet: true,
+	}, nil
+}

@@ -147,6 +147,33 @@ func (fm *FileManager) GetFileStat(path string) (fs.FileInfo, error) {
 	return os.Stat(path)
 }
 
+func (fm *FileManager) GetFileData(path string) (string, error) {
+	path = filepath.Join(fm.VolumeDir, path)
+	if err := fm.validatePath(path); err != nil {
+		return "", err
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	// fmt.Println(string(data))
+	return string(data), nil
+}
+
+func (fm *FileManager) SetFileData(path string, input []byte) error {
+	path = filepath.Join(fm.VolumeDir, path)
+	if err := fm.validatePath(path); err != nil {
+		return err
+	}
+
+	err := os.WriteFile(path, input, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (fm *FileManager) ListFilePath(path string) ([]fs.DirEntry, error) {
 	path = filepath.Join(fm.VolumeDir, path)
 	if err := fm.validatePath(path); err != nil {

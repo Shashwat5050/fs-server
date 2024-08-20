@@ -27,7 +27,7 @@ func main() {
 		panic(err)
 	}
 	logger.Debug("initialized object storage client")
-	
+
 	fusecase := usecase.NewLocalFileManager(
 		logger,
 		obs,
