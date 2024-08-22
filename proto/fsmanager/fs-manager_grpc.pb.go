@@ -20,20 +20,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FsManager_GetFileStat_FullMethodName      = "/fsmanager.FsManager/GetFileStat"
-	FsManager_ListFilePath_FullMethodName     = "/fsmanager.FsManager/ListFilePath"
-	FsManager_CreatePath_FullMethodName       = "/fsmanager.FsManager/CreatePath"
-	FsManager_DownloadFile_FullMethodName     = "/fsmanager.FsManager/DownloadFile"
-	FsManager_BulkDownloadFile_FullMethodName = "/fsmanager.FsManager/BulkDownloadFile"
-	FsManager_UploadFile_FullMethodName       = "/fsmanager.FsManager/UploadFile"
-	FsManager_DeleteFile_FullMethodName       = "/fsmanager.FsManager/DeleteFile"
-	FsManager_RecoverFile_FullMethodName      = "/fsmanager.FsManager/RecoverFile"
-	FsManager_MoveFile_FullMethodName         = "/fsmanager.FsManager/MoveFile"
-	FsManager_CopyFile_FullMethodName         = "/fsmanager.FsManager/CopyFile"
-	FsManager_CompressFile_FullMethodName     = "/fsmanager.FsManager/CompressFile"
-	FsManager_BulkCompressFile_FullMethodName = "/fsmanager.FsManager/BulkCompressFile"
-	FsManager_GetFileData_FullMethodName      = "/fsmanager.FsManager/GetFileData"
-	FsManager_SetFileData_FullMethodName      = "/fsmanager.FsManager/SetFileData"
+	FsManager_GetFileStat_FullMethodName           = "/fsmanager.FsManager/GetFileStat"
+	FsManager_ListFilePath_FullMethodName          = "/fsmanager.FsManager/ListFilePath"
+	FsManager_CreatePath_FullMethodName            = "/fsmanager.FsManager/CreatePath"
+	FsManager_DownloadFile_FullMethodName          = "/fsmanager.FsManager/DownloadFile"
+	FsManager_BulkDownloadFile_FullMethodName      = "/fsmanager.FsManager/BulkDownloadFile"
+	FsManager_UploadFile_FullMethodName            = "/fsmanager.FsManager/UploadFile"
+	FsManager_DeleteFile_FullMethodName            = "/fsmanager.FsManager/DeleteFile"
+	FsManager_RecoverFile_FullMethodName           = "/fsmanager.FsManager/RecoverFile"
+	FsManager_MoveFile_FullMethodName              = "/fsmanager.FsManager/MoveFile"
+	FsManager_CopyFile_FullMethodName              = "/fsmanager.FsManager/CopyFile"
+	FsManager_CompressFile_FullMethodName          = "/fsmanager.FsManager/CompressFile"
+	FsManager_BulkCompressFile_FullMethodName      = "/fsmanager.FsManager/BulkCompressFile"
+	FsManager_InstallAndExtractFile_FullMethodName = "/fsmanager.FsManager/InstallAndExtractFile"
+	FsManager_UninstallServer_FullMethodName       = "/fsmanager.FsManager/UninstallServer"
+	FsManager_GetDiskSpace_FullMethodName          = "/fsmanager.FsManager/GetDiskSpace"
+	FsManager_GetFileData_FullMethodName           = "/fsmanager.FsManager/GetFileData"
+	FsManager_SetFileData_FullMethodName           = "/fsmanager.FsManager/SetFileData"
 )
 
 // FsManagerClient is the client API for FsManager service.
@@ -52,6 +55,9 @@ type FsManagerClient interface {
 	CopyFile(ctx context.Context, in *TwoFileRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	CompressFile(ctx context.Context, in *CompressFileRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	BulkCompressFile(ctx context.Context, in *BulkCompressFileRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	InstallAndExtractFile(ctx context.Context, in *InstallAndExtractFileRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	UninstallServer(ctx context.Context, in *UninstallServerRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	GetDiskSpace(ctx context.Context, in *GetDiskSpaceRequest, opts ...grpc.CallOption) (*GetDiskSpaceResponse, error)
 	GetFileData(ctx context.Context, in *GetFileDataRequest, opts ...grpc.CallOption) (*GetFileDataResponse, error)
 	SetFileData(ctx context.Context, in *SetFileDataRequest, opts ...grpc.CallOption) (*SetFileDataResponse, error)
 }
@@ -205,6 +211,36 @@ func (c *fsManagerClient) BulkCompressFile(ctx context.Context, in *BulkCompress
 	return out, nil
 }
 
+func (c *fsManagerClient) InstallAndExtractFile(ctx context.Context, in *InstallAndExtractFileRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, FsManager_InstallAndExtractFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fsManagerClient) UninstallServer(ctx context.Context, in *UninstallServerRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, FsManager_UninstallServer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fsManagerClient) GetDiskSpace(ctx context.Context, in *GetDiskSpaceRequest, opts ...grpc.CallOption) (*GetDiskSpaceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDiskSpaceResponse)
+	err := c.cc.Invoke(ctx, FsManager_GetDiskSpace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *fsManagerClient) GetFileData(ctx context.Context, in *GetFileDataRequest, opts ...grpc.CallOption) (*GetFileDataResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetFileDataResponse)
@@ -241,6 +277,9 @@ type FsManagerServer interface {
 	CopyFile(context.Context, *TwoFileRequest) (*empty.Empty, error)
 	CompressFile(context.Context, *CompressFileRequest) (*empty.Empty, error)
 	BulkCompressFile(context.Context, *BulkCompressFileRequest) (*empty.Empty, error)
+	InstallAndExtractFile(context.Context, *InstallAndExtractFileRequest) (*empty.Empty, error)
+	UninstallServer(context.Context, *UninstallServerRequest) (*empty.Empty, error)
+	GetDiskSpace(context.Context, *GetDiskSpaceRequest) (*GetDiskSpaceResponse, error)
 	GetFileData(context.Context, *GetFileDataRequest) (*GetFileDataResponse, error)
 	SetFileData(context.Context, *SetFileDataRequest) (*SetFileDataResponse, error)
 	mustEmbedUnimplementedFsManagerServer()
@@ -288,6 +327,15 @@ func (UnimplementedFsManagerServer) CompressFile(context.Context, *CompressFileR
 }
 func (UnimplementedFsManagerServer) BulkCompressFile(context.Context, *BulkCompressFileRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BulkCompressFile not implemented")
+}
+func (UnimplementedFsManagerServer) InstallAndExtractFile(context.Context, *InstallAndExtractFileRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InstallAndExtractFile not implemented")
+}
+func (UnimplementedFsManagerServer) UninstallServer(context.Context, *UninstallServerRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UninstallServer not implemented")
+}
+func (UnimplementedFsManagerServer) GetDiskSpace(context.Context, *GetDiskSpaceRequest) (*GetDiskSpaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDiskSpace not implemented")
 }
 func (UnimplementedFsManagerServer) GetFileData(context.Context, *GetFileDataRequest) (*GetFileDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFileData not implemented")
@@ -507,6 +555,60 @@ func _FsManager_BulkCompressFile_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FsManager_InstallAndExtractFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InstallAndExtractFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FsManagerServer).InstallAndExtractFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FsManager_InstallAndExtractFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FsManagerServer).InstallAndExtractFile(ctx, req.(*InstallAndExtractFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FsManager_UninstallServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UninstallServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FsManagerServer).UninstallServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FsManager_UninstallServer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FsManagerServer).UninstallServer(ctx, req.(*UninstallServerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FsManager_GetDiskSpace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDiskSpaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FsManagerServer).GetDiskSpace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FsManager_GetDiskSpace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FsManagerServer).GetDiskSpace(ctx, req.(*GetDiskSpaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FsManager_GetFileData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetFileDataRequest)
 	if err := dec(in); err != nil {
@@ -585,6 +687,18 @@ var FsManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BulkCompressFile",
 			Handler:    _FsManager_BulkCompressFile_Handler,
+		},
+		{
+			MethodName: "InstallAndExtractFile",
+			Handler:    _FsManager_InstallAndExtractFile_Handler,
+		},
+		{
+			MethodName: "UninstallServer",
+			Handler:    _FsManager_UninstallServer_Handler,
+		},
+		{
+			MethodName: "GetDiskSpace",
+			Handler:    _FsManager_GetDiskSpace_Handler,
 		},
 		{
 			MethodName: "GetFileData",

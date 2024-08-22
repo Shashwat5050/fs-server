@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"io"
+	"log"
 	"path/filepath"
 
 	"go.uber.org/zap"
@@ -290,6 +291,43 @@ func (c *controller) BulkCompressFile(ctx context.Context, req *fpb.BulkCompress
 	return &emptypb.Empty{}, nil
 }
 
+func (c *controller) InstallAndExtractFile(ctx context.Context, req *fpb.InstallAndExtractFileRequest) (*emptypb.Empty, error) {
+	c.log.Info("InstallAndExtractFile", zap.String("url", req.Url), zap.String("installation-directory", req.InstallationPath), zap.Bool("disableCache", req.DisableCache))
+
+	log.Println("things are changed now")
+	_, err := c.use.InstallAndExtractFile(ctx, req.Url, req.InstallationPath, req.DisableCache)
+
+	if err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (c *controller) UninstallServer(ctx context.Context, req *fpb.UninstallServerRequest) (*emptypb.Empty, error) {
+	c.log.Info("UninstallServer", zap.String("gsName", req.ServerName))
+
+	err := c.use.UninstallServer(req.ServerName)
+	if err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (c *controller) GetDiskSpace(ctx context.Context, req *fpb.GetDiskSpaceRequest) (*fpb.GetDiskSpaceResponse, error) {
+	c.log.Info("Getting Disk space", zap.String("gsName", req.ServerName))
+
+	size, err := c.use.GetDiskSpace(req.ServerName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &fpb.GetDiskSpaceResponse{
+		ServerName: req.ServerName,
+		Size:       size,
+	}, nil
+
+}
 
 func (c *controller) GetFileData(ctx context.Context, req *fpb.GetFileDataRequest) (*fpb.GetFileDataResponse, error) {
 	c.log.Info("GetFileStat", zap.String("path", req.Path))

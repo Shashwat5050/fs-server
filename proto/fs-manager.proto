@@ -17,6 +17,9 @@ service FsManager {
     rpc CopyFile(TwoFileRequest) returns (google.protobuf.Empty) {}
     rpc CompressFile(CompressFileRequest) returns (google.protobuf.Empty) {}
     rpc BulkCompressFile(BulkCompressFileRequest) returns (google.protobuf.Empty) {}
+    rpc InstallAndExtractFile(InstallAndExtractFileRequest)returns (google.protobuf.Empty) {}
+    rpc UninstallServer(UninstallServerRequest)returns(google.protobuf.Empty){}
+    rpc GetDiskSpace(GetDiskSpaceRequest) returns (GetDiskSpaceResponse){}
     rpc GetFileData(GetFileDataRequest) returns (GetFileDataResponse){}
     rpc SetFileData(SetFileDataRequest) returns (SetFileDataResponse){}
 
@@ -127,4 +130,25 @@ message CreatePathRequest {
     string path = 1;
     string name = 2;
     bool isDir = 3;
+}
+
+message InstallAndExtractFileRequest{
+    string url =1;
+    string installationPath=2;
+    bool disableCache=3;
+
+    
+}
+
+message UninstallServerRequest{
+    string serverName=1;
+}
+
+message GetDiskSpaceRequest{
+    string serverName=1;
+}
+
+message GetDiskSpaceResponse{
+    string serverName=1;
+    int64  size=2;
 }

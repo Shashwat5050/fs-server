@@ -7,12 +7,13 @@ import (
 	"log"
 	"net"
 
+	"github.com/pkg/sftp"
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	bpb "iceline-hosting.com/backend/proto/backupmanager"
 	fpb "iceline-hosting.com/backend/proto/fsmanager"
-	sfpb "iceline-hosting.com/backend/proto/fsmanager"
+	sfpb "iceline-hosting.com/backend/proto/sftpmanager"
 )
 
 type fsUsecase interface {
@@ -28,8 +29,11 @@ type fsUsecase interface {
 	CopyFile(path, name, newPath, newName string) error
 	CompressFile(ctx context.Context, path, name string) error
 	BulkCompressFile(ctx context.Context, path string, filenames []string) (string, error)
+	InstallAndExtractFile(ctx context.Context, url string, destination string, disableCache bool) (string, error)
+	UninstallServer(serverName string) error
+	GetDiskSpace(path string) (int64, error)
 	GetFileData(path string) (string, error)
-	SetFileData(path string, data []byte) error
+	SetFileData(path string,data []byte) error
 }
 
 type backupUsecase interface {
@@ -39,6 +43,10 @@ type backupUsecase interface {
 
 type sftpUseCase interface {
 	ConnectToSFTP(ctx context.Context, host, password string, port int32, username string) (string, error)
+	// UploadFileToSFTP(ctx context.Context,host string,port int32,user string,password string,fileName,remoteFilePath string)(string,error)
+	DeleteFileFromSFTP(string, string) error
+	DisconnectFromSFTP()
+	GetSFTPClient() (*sftp.Client, error)
 }
 
 type usecase interface {
@@ -46,17 +54,26 @@ type usecase interface {
 	backupUsecase
 	sftpUseCase
 }
+type operationType int
 
 type controller struct {
 	use  usecase
 	port string
 
-	log    *otelzap.Logger
-	server *grpc.Server
+	log              *otelzap.Logger
+	server           *grpc.Server
+	sftpConnected    bool
+	currentOperation operationType
 	fpb.UnimplementedFsManagerServer
 	bpb.UnimplementedBackupManagerServer
 	sfpb.UnimplementedSftpManagerServer
 }
+
+const (
+	fsOperation operationType = iota
+	backupOperation
+	sftpOperation
+)
 
 type settings func(*controller)
 
@@ -72,9 +89,11 @@ const (
 
 func NewController(logger *otelzap.Logger, use usecase, opts ...settings) *controller {
 	c := &controller{
-		log:  logger,
-		use:  use,
-		port: defaultPort,
+		log:              logger,
+		use:              use,
+		port:             defaultPort,
+		sftpConnected:    false,
+		currentOperation: fsOperation,
 	}
 
 	for _, opt := range opts {

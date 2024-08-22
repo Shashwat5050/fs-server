@@ -14,7 +14,7 @@ require (
 	golang.org/x/crypto v0.21.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/grpc v1.64.0
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.2
 	iceline-hosting.com/backend/proto v0.0.0-00010101000000-000000000000
 	iceline-hosting.com/core v0.0.0-00010101000000-000000000000
 )

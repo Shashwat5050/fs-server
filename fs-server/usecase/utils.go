@@ -3,8 +3,10 @@ package usecase
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -145,4 +147,153 @@ func (fm *FileManager) validatePath(path string) error {
 	}
 
 	return nil
+}
+
+// extractZip extracts a zip archive to the specified directory
+func (fm *FileManager) extractZip(zipFile, targetDir string) error {
+	reader, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	for _, file := range reader.File {
+		path := filepath.Join(targetDir, file.Name)
+
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, file.Mode())
+			continue
+		}
+
+		if err = os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+			return err
+		}
+
+		dst, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer dst.Close()
+
+		src, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		if _, err = io.Copy(dst, src); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (fm *FileManager) copyFile(src, dest string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	// Create destination file
+	destinationFile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer destinationFile.Close()
+
+	// Copy the content from source to destination
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Function to check if any file in the zip exists in the installation path
+func (fm *FileManager) checkZipContents(zipFilePath string, installationPath string) error {
+	// Open the zip archive for reading
+	r, err := zip.OpenReader(zipFilePath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	// Iterate through each file in the zip archive
+	for _, f := range r.File {
+		// Check if the file already exists in the installation path
+		existingFilePath := filepath.Join(installationPath, f.Name)
+		if _, err := os.Stat(existingFilePath); err == nil {
+			if err := os.Remove(zipFilePath); err != nil {
+				log.Println("Failed to remove zip file:", err)
+
+			}
+
+			return errors.New("target path contains file(s) that are available in the new zip")
+		}
+	}
+	return nil
+}
+
+func (fm *FileManager) ensureCacheDirectoryExists(cachePath string) error {
+	// Ensure cache directory exists
+	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+		log.Println("Cache directory does not exist. Creating cache directory.")
+		if err := os.MkdirAll(cachePath, 0755); err != nil {
+			log.Println("Error creating cache directory:", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func(fm *FileManager)ensureInstallationPathExists(installationPath string)error{
+	// Ensure cache directory exists
+	if _, err := os.Stat(installationPath); os.IsNotExist(err) {
+		log.Println("installationPath does not exist. Creating installationPath.")
+		if err := os.MkdirAll(installationPath, 0755); err != nil {
+			log.Println("Error creating installationPath:", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (fm *FileManager) getTargetPath(fileName, installationPath string) string {
+	if filepath.Ext(fileName) == ".sql" {
+		return filepath.Join(installationPath, fileName)
+	}
+	return filepath.Join(installationPath, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+}
+
+func (fm *FileManager) saveDownloadedFile(body io.ReadCloser, targetPath string) error {
+	// Create the target file
+	file, err := os.Create(targetPath)
+	if err != nil {
+		log.Println("Error while creating target file path:", err)
+		return err
+	}
+	defer file.Close()
+
+	// Copy the downloaded file to the target file
+	_, err = io.Copy(file, body)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fm *FileManager) cacheFile(sourcePath, cachedFilePath string) error {
+	return fm.copyFile(sourcePath, cachedFilePath)
+}
+
+func (fm *FileManager) checkZipAndExtract(zipPath, extractionPath string) error {
+	// Check if any file in the zip exists in the installation path
+	if err := fm.checkZipContents(zipPath, extractionPath); err != nil {
+		return err
+	}
+
+	// Extract the zip file
+	return fm.extractZip(zipPath, extractionPath)
 }

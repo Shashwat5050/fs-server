@@ -20,7 +20,7 @@ func main() {
 	}
 	logger.Debug("initialized logger")
 
-	// initialize object storage client
+	// initialize object storage client'
 	obs, err := backblaze.NewClient()
 	if err != nil {
 		logger.Error("cannot initialize object storage client", zap.Error(err))

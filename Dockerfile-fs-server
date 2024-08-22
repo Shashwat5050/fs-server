@@ -5,6 +5,7 @@ COPY ./proto/ /dockerdev/proto
 COPY ./core/ /dockerdev/core
 COPY ./fs-server/ /dockerdev/fs-server
 
+
 WORKDIR /dockerdev/fs-server
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -gcflags="all=-N -l" -o /server
@@ -18,3 +19,4 @@ WORKDIR /
 COPY --from=build-env /server /
 
 CMD ["/server"]
+

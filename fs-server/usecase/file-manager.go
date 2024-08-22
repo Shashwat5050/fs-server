@@ -2,25 +2,31 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/pkg/sftp"
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.uber.org/zap"
 )
 
 type FileManager struct {
-	log         *otelzap.Logger
-	obs         objectStorage
-	bucket      string
-	VolumeDir   string
-	keepPeriod  time.Duration
-	cleanPeriod time.Duration
+	log           *otelzap.Logger
+	obs           objectStorage
+	bucket        string
+	VolumeDir     string
+	keepPeriod    time.Duration
+	cleanPeriod   time.Duration
+	sftpClient    *sftp.Client
+	sftpConnected bool
 }
 
 type settings func(*FileManager)
@@ -77,6 +83,7 @@ const (
 	defaultBucket      = "backups"
 	defaultkeepTime    = 30
 	defaultCleanPeriod = time.Hour * 3
+	defaultCacheDir    = "/tmp/mods"
 )
 
 func NewLocalFileManager(logger *otelzap.Logger, obs objectStorage, opts ...settings) *FileManager {
@@ -150,6 +157,14 @@ func (fm *FileManager) GetFileStat(path string) (fs.FileInfo, error) {
 func (fm *FileManager) GetFileData(path string) (string, error) {
 	path = filepath.Join(fm.VolumeDir, path)
 	if err := fm.validatePath(path); err != nil {
+		info, err := fm.GetFileStat(path)
+		if err != nil {
+			return "", err
+		}
+
+		if info.IsDir() {
+			return "", errors.New("Given Path leads to directory not File")
+		}
 		return "", err
 	}
 
@@ -157,7 +172,6 @@ func (fm *FileManager) GetFileData(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// fmt.Println(string(data))
 	return string(data), nil
 }
 
@@ -284,6 +298,23 @@ func (fm *FileManager) DeleteFile(path, filename string) error {
 	deletedPath := filepath.Join(fm.VolumeDir, path, ".trash-"+filename)
 
 	err := os.Rename(fullPath, deletedPath)
+	log.Println(err, "error while moving it to trash")
+	if err != nil {
+		return fmt.Errorf("could not move to trash: %w", err)
+	}
+
+	return nil
+}
+func (fm *FileManager) UninstallServer(server_name string) error {
+	fullPath := filepath.Join(fm.VolumeDir, server_name)
+	if err := fm.validatePath(fullPath); err != nil {
+		return err
+	}
+
+	// deletedPath := filepath.Join(fm.VolumeDir, path, ".trash-"+filename)
+
+	err := os.RemoveAll(fullPath)
+	log.Println(err, "error while moving it to trash")
 	if err != nil {
 		return fmt.Errorf("could not move to trash: %w", err)
 	}
@@ -425,4 +456,368 @@ func (fm *FileManager) BulkCompressFile(ctx context.Context, path string, filena
 	}
 
 	return outputPath, nil
+}
+
+// // InstallAndExtractFile will install file from url and extract it at directory located at installation path
+// func (fm *FileManager) InstallAndExtractFile(ctx context.Context, url string, installationPath string) (string, error) {
+// 	// Download the file from the URL
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer resp.Body.Close()
+
+// 	installationPath=filepath.Join(fm.VolumeDir,installationPath)
+// 	log.Println(installationPath)
+// 	// Check if the installation path exists, if not, create it
+// 	if _, err := os.Stat(installationPath); os.IsNotExist(err) {
+// 		err = os.MkdirAll(installationPath, 0755)
+// 		if err != nil {
+// 			log.Println(err, "error while creating directory")
+// 			return "", err
+// 		}
+// 	}
+
+// 	// Extract the file to the installation directory
+// 	var targetPath string
+// 	fileName := filepath.Base(url)
+// 	if filepath.Ext(fileName)==".sql"{
+// 		targetPath = filepath.Join(installationPath,fileName)
+
+// 	}else{
+// 		targetPath = filepath.Join(installationPath, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+// 	}
+// 	// log.Println("fileName", fileName)
+
+// 	// targetPath := filepath.Join(installationPath, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+// 	log.Println("target path", targetPath)
+// 	file, err := os.Create(targetPath)
+// 	if err != nil {
+// 		log.Println("error while creating target file path", err)
+// 		return "", err
+// 	}
+// 	defer file.Close()
+
+// 	_, err = io.Copy(file, resp.Body)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	// Check if the downloaded file is a zip archive
+// 	if strings.HasSuffix(fileName, ".zip") {
+// 		err = fm.extractZip(targetPath, installationPath)
+// 		if err != nil {
+// 			log.Println("error while extracting file", err)
+// 			return "", err
+// 		}
+// 		// Remove the zip file after extraction
+// 		err = os.Remove(targetPath)
+// 		if err != nil {
+// 			fmt.Println("Failed to remove zip file:", err)
+// 		}
+// 	}
+
+// 	return targetPath, nil
+// }
+
+// // InstallAndExtractfile with cach function
+// func (fm *FileManager) InstallAndExtractFile(ctx context.Context, url string, installationPath string) (string, error){
+// 	var targetPath string
+// 	// Defining cache path
+
+// 	cachePath:=filepath.Join(defaultCacheDir)
+// 	installationPath = filepath.Join(fm.VolumeDir, installationPath)
+
+// 	log.Println("Cache path:", cachePath)
+// 	log.Println("Installation path:", installationPath)
+
+// // Ensure cache directory exists
+// if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+// 	log.Println("Cache directory does not exist. Creating cache directory.")
+// 	if err := os.MkdirAll(cachePath, 0755); err != nil {
+// 		log.Println("Error creating cache directory:", err)
+// 		return "", err
+// 	}
+// }
+
+// 	// Extract filename from URL
+// 	fileName := filepath.Base(url)
+
+// 	if filepath.Ext(fileName)==".sql"{
+// 		// implement caching
+// 		// Check if the file already exists in the cache
+// 	targetPath = filepath.Join(installationPath,fileName)
+// 	}else{
+// 		targetPath = filepath.Join(installationPath, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+// 	}
+
+// 	// Check if the file already exists in the cache
+// 	cachedFilePath := filepath.Join(cachePath, fileName)
+// 	if _, err := os.Stat(cachedFilePath); err == nil {
+// 		log.Println("File found in cache. Copying from cache to installation path.")
+// 		if _,err:=os.Stat(installationPath);os.IsNotExist(err){
+// 			log.Println("target path does not exist.Creating target path.")
+// 			if err:=os.MkdirAll(installationPath,0755);err!=nil{
+// 				log.Println("Error creating target directory:",err)
+// 				return "",err
+// 			}
+// 		}
+// 		// Create the target file
+// 	file, err := os.Create(targetPath)
+// 	if err != nil {
+// 		log.Println("Error while creating target file path:", err)
+// 		return "", err
+// 	}
+// 	defer file.Close()
+// 		if err := fm.copyFile(cachedFilePath, targetPath); err != nil {
+// 			return "", err
+// 		}
+// // If the copied file is a zip file, extract it
+// if strings.HasSuffix(fileName, ".zip") {
+// 	log.Println("Extracting zip file.")
+// 	// Check if any file in the zip exists in the installation path
+// 	if err := fm.checkZipContents(targetPath, installationPath); err != nil {
+// 		return "", err
+// 	}
+// 	if err := fm.extractZip(targetPath, installationPath); err != nil {
+// 		log.Println("Error while extracting file:", err)
+// 		return "", err
+// 	}
+// 	// Remove the zip file after extraction
+// 	if err := os.Remove(targetPath); err != nil {
+// 		log.Println("Failed to remove zip file:", err)
+// 	}
+// }
+
+// return targetPath, nil
+// 	}
+// 	// Download the file from the URL
+// 	log.Println("Downloading file from URL:", url)
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Check if the installation path exists, if not, create it
+// 	if _, err := os.Stat(installationPath); os.IsNotExist(err) {
+// 		err = os.MkdirAll(installationPath, 0755)
+// 		if err != nil {
+// 			log.Println("Error while creating directory:", err)
+// 			return "", err
+// 		}
+// 	}
+
+// 	// Create the target file
+// 	file, err := os.Create(targetPath)
+// 	if err != nil {
+// 		log.Println("Error while creating target file path:", err)
+// 		return "", err
+// 	}
+// 	defer file.Close()
+
+// 	// Copy the downloaded file to the target file
+// 	_, err = io.Copy(file, resp.Body)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	// Cache the downloaded file
+// 	log.Println("Caching the downloaded file.")
+// 	if err := fm.copyFile(targetPath, cachedFilePath); err != nil {
+// 		log.Println("Error while caching file:", err)
+// 		// Don't return error, continue execution
+// 	}
+
+// 	// Check if the downloaded file is a zip archive and extract it
+// 	if strings.HasSuffix(fileName, ".zip") {
+// 		log.Println("Extracting zip file.")
+// 		// Check if any file in the zip exists in the installation path
+// 		if err := fm.checkZipContents(targetPath, installationPath); err != nil {
+// 			return "", err
+// 		}
+
+// 		// Extract the zip file
+// 		if err := fm.extractZip(targetPath, installationPath); err != nil {
+// 			log.Println("Error while extracting file:", err)
+// 			return "", err
+// 		}
+// 		// Remove the zip file after extraction
+// 		if err := os.Remove(targetPath); err != nil {
+// 			log.Println("Failed to remove zip file:", err)
+// 		}
+// 	}
+
+// 	return targetPath, nil
+
+// }
+
+// InstallAndExtractFile downloads and extracts a file from a URL to a specified installation path,
+// with caching functionality.
+func (fm *FileManager) InstallAndExtractFile(ctx context.Context, url string, installationPath string, disableCache bool) (string, error) {
+
+	// check if disableCache is true then do not store installed mod in cache
+	// Define cache path
+	cachePath := filepath.Join(defaultCacheDir)
+	installationPath = filepath.Join(fm.VolumeDir, installationPath)
+
+	log.Println("Cache path:", cachePath)
+	log.Println("Installation path:", installationPath)
+
+	// Ensure cache directory exists
+	if err := fm.ensureCacheDirectoryExists(cachePath); err != nil {
+		return "", err
+	}
+
+	// Ensure installation path exists
+	if err := fm.ensureInstallationPathExists(installationPath); err != nil {
+		return "", err
+	}
+	// Extract filename from URL
+	fileName := filepath.Base(url)
+
+	targetPath := fm.getTargetPath(fileName, installationPath)
+
+	// Check if the file already exists in the cache
+	cachedFilePath := filepath.Join(cachePath, fileName)
+	if _, err := os.Stat(cachedFilePath); err == nil {
+		log.Println("File found in cache. Copying from cache to installation path.")
+		if err := fm.copyFile(cachedFilePath, targetPath); err != nil {
+			return "", err
+		}
+
+		// If the copied file is a zip file, extract it
+		if strings.HasSuffix(fileName, ".zip") {
+			log.Println("Extracting zip file.")
+			if err := fm.checkZipAndExtract(targetPath, installationPath); err != nil {
+				log.Println("Error while extracting file:", err)
+				return "", err
+			}
+			// Remove the zip file after extraction
+			if err := os.Remove(targetPath); err != nil {
+				log.Println("Failed to remove zip file:", err)
+			}
+		}
+
+		return targetPath, nil
+	}
+
+	// Download the file from the URL
+	log.Println("Downloading file from URL:", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if err := fm.saveDownloadedFile(resp.Body, targetPath); err != nil {
+		return "", err
+	}
+	// if disable cache is true then don't store the file in cache
+	if disableCache == false {
+		// Cache the downloaded file
+		log.Println("Caching the downloaded file.")
+		if err := fm.cacheFile(targetPath, cachedFilePath); err != nil {
+			log.Println("Error while caching file:", err)
+			// Don't return error, continue execution
+		}
+	}
+
+	// If the downloaded file is a zip archive, extract it
+	if strings.HasSuffix(fileName, ".zip") {
+		log.Println("Extracting zip file.")
+		if err := fm.checkZipAndExtract(targetPath, installationPath); err != nil {
+			log.Println("Error while extracting file:", err)
+			return "", err
+		}
+		// Remove the zip file after extraction
+		if err := os.Remove(targetPath); err != nil {
+			log.Println("Failed to remove zip file:", err)
+		}
+	}
+
+	return targetPath, nil
+}
+
+// func (fm *FileManager) ensureCacheDirectoryExists(cachePath string) error {
+// 	// Ensure cache directory exists
+// 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+// 		log.Println("Cache directory does not exist. Creating cache directory.")
+// 		if err := os.MkdirAll(cachePath, 0755); err != nil {
+// 			log.Println("Error creating cache directory:", err)
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
+
+// func(fm *FileManager)ensureInstallationPathExists(installationPath string)error{
+// 	// Ensure cache directory exists
+// 	if _, err := os.Stat(installationPath); os.IsNotExist(err) {
+// 		log.Println("installationPath does not exist. Creating installationPath.")
+// 		if err := os.MkdirAll(installationPath, 0755); err != nil {
+// 			log.Println("Error creating installationPath:", err)
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
+
+// func (fm *FileManager) getTargetPath(fileName, installationPath string) string {
+// 	if filepath.Ext(fileName) == ".sql" {
+// 		return filepath.Join(installationPath, fileName)
+// 	}
+// 	return filepath.Join(installationPath, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+// }
+
+// func (fm *FileManager) saveDownloadedFile(body io.ReadCloser, targetPath string) error {
+// 	// Create the target file
+// 	file, err := os.Create(targetPath)
+// 	if err != nil {
+// 		log.Println("Error while creating target file path:", err)
+// 		return err
+// 	}
+// 	defer file.Close()
+
+// 	// Copy the downloaded file to the target file
+// 	_, err = io.Copy(file, body)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+// func (fm *FileManager) cacheFile(sourcePath, cachedFilePath string) error {
+// 	return fm.copyFile(sourcePath, cachedFilePath)
+// }
+
+// func (fm *FileManager) checkZipAndExtract(zipPath, extractionPath string) error {
+// 	// Check if any file in the zip exists in the installation path
+// 	if err := fm.checkZipContents(zipPath, extractionPath); err != nil {
+// 		return err
+// 	}
+
+// 	// Extract the zip file
+// 	return fm.extractZip(zipPath, extractionPath)
+// }
+
+func (fm *FileManager) GetDiskSpace(path string) (int64, error) {
+	var size int64
+	root := filepath.Join(fm.VolumeDir, path)
+
+	err := filepath.Walk(root, func(_ string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return nil
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("error walking through directory: %w", err)
+	}
+
+	return size, nil
 }
