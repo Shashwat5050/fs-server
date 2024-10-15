@@ -19,10 +19,15 @@ func (c *controller) GetFileStat(ctx context.Context, req *fpb.GetFileStatReques
 		return nil, err
 	}
 
+	fileSize, err := c.use.GetDiskSpace(req.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	return &fpb.GetFileStatResponse{
 		Stat: &fpb.FileInfo{
 			Name:    fileStat.Name(),
-			Size:    fileStat.Size(),
+			Size:    fileSize,
 			Mode:    uint32(fileStat.Mode()),
 			ModTime: fileStat.ModTime().Unix(),
 			IsDir:   fileStat.IsDir(),
@@ -45,13 +50,23 @@ func (c *controller) ListFilePath(ctx context.Context, req *fpb.ListFilePathRequ
 			return nil, err
 		}
 
+		var filesize int64
+		if filePath.IsDir() {
+			filesize, err = c.use.GetDiskSpace(req.Path + "/" + filePath.Name())
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			filesize = info.Size()
+		}
+
 		fileInfos = append(fileInfos, &fpb.DirEntry{
 			Name:  filePath.Name(),
 			IsDir: filePath.IsDir(),
 			Type:  uint32(filePath.Type()),
 			Info: &fpb.FileInfo{
 				Name:    info.Name(),
-				Size:    info.Size(),
+				Size:    filesize,
 				Mode:    uint32(info.Mode()),
 				ModTime: info.ModTime().Unix(),
 				IsDir:   info.IsDir(),
@@ -345,7 +360,7 @@ func (c *controller) GetFileData(ctx context.Context, req *fpb.GetFileDataReques
 func (c *controller) SetFileData(ctx context.Context, req *fpb.SetFileDataRequest) (*fpb.SetFileDataResponse, error) {
 	c.log.Info("SetFileStat", zap.String("path", req.Path))
 
-	err := c.use.SetFileData(req.Path,[]byte(req.Data))
+	err := c.use.SetFileData(req.Path, []byte(req.Data))
 	if err != nil {
 		return &fpb.SetFileDataResponse{IsSet: false}, err
 	}
