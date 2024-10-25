@@ -117,8 +117,12 @@ func (fm *FileManager) ArchiveFiles(ctx context.Context, inputPath string, filen
 }
 
 func (fm *FileManager) generateNewCopyName(newPath, newName string) string {
+
+	fmt.Println(fm.VolumeDir, newPath, newName)
 	filePath := filepath.Join(fm.VolumeDir, newPath, newName)
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+
+	var err error
+	if _, err = os.Stat(filePath); os.IsNotExist(err) {
 		return filePath
 	}
 
@@ -248,7 +252,7 @@ func (fm *FileManager) ensureCacheDirectoryExists(cachePath string) error {
 	return nil
 }
 
-func(fm *FileManager)ensureInstallationPathExists(installationPath string)error{
+func (fm *FileManager) ensureInstallationPathExists(installationPath string) error {
 	// Ensure cache directory exists
 	if _, err := os.Stat(installationPath); os.IsNotExist(err) {
 		log.Println("installationPath does not exist. Creating installationPath.")
@@ -296,4 +300,37 @@ func (fm *FileManager) checkZipAndExtract(zipPath, extractionPath string) error 
 
 	// Extract the zip file
 	return fm.extractZip(zipPath, extractionPath)
+}
+
+func (fm *FileManager) copyDirectory(src, dest string) error {
+	// Create the destination directory
+	err := os.MkdirAll(dest, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	// Read the contents of the source directory
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcEntry := filepath.Join(src, entry.Name())
+		destEntry := filepath.Join(dest, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively copy subdirectory
+			if err := fm.copyDirectory(srcEntry, destEntry); err != nil {
+				return err
+			}
+		} else {
+			// Copy the file
+			if err := fm.copyFile(srcEntry, destEntry); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

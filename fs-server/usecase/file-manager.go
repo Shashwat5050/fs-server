@@ -172,7 +172,19 @@ func (fm *FileManager) GetFileData(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(data), nil
+
+	// check if file is editable or not
+	mimeType := http.DetectContentType(data)
+	
+	editableMIMETypes := []string{"text/plain", "text/markdown", "application/json"}
+
+	for _, mt := range editableMIMETypes {
+		if strings.Contains(mimeType, mt) {
+			return string(data), nil
+		}
+	}
+
+	return "", fmt.Errorf("Invalid content type")
 }
 
 func (fm *FileManager) SetFileData(path string, input []byte) error {
@@ -356,7 +368,11 @@ func (fm *FileManager) MoveFile(path, filename, newPath, newFilename string) err
 	return os.Rename(path, newPath)
 }
 
+// Copy File and Diretory from path to newpath ,saved with newName
 func (fm *FileManager) CopyFile(path, filename, newPath, newName string) error {
+
+	generalPath := filepath.Join(path, filename)
+
 	path = filepath.Join(fm.VolumeDir, path, filename)
 	if err := fm.validatePath(path); err != nil {
 		return err
@@ -365,6 +381,20 @@ func (fm *FileManager) CopyFile(path, filename, newPath, newName string) error {
 	newPath = fm.generateNewCopyName(newPath, newName)
 	if err := fm.validatePath(newPath); err != nil {
 		return err
+
+	}
+
+	fileStats, err := fm.GetFileStat(generalPath)
+	if err != nil {
+		return err
+	}
+
+	if fileStats.IsDir() {
+		fmt.Println("Coping Directory...")
+		if err := fm.copyDirectory(path, newPath); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	src, err := os.Open(filepath.Clean(path))
