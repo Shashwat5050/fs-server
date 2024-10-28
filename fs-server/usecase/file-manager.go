@@ -175,7 +175,7 @@ func (fm *FileManager) GetFileData(path string) (string, error) {
 
 	// check if file is editable or not
 	mimeType := http.DetectContentType(data)
-	
+
 	editableMIMETypes := []string{"text/plain", "text/markdown", "application/json"}
 
 	for _, mt := range editableMIMETypes {
@@ -310,8 +310,23 @@ func (fm *FileManager) DeleteFile(path, filename string) error {
 	deletedPath := filepath.Join(fm.VolumeDir, path, ".trash-"+filename)
 
 	err := os.Rename(fullPath, deletedPath)
-	log.Println(err, "error while moving it to trash")
 	if err != nil {
+		if os.IsExist(err) {
+
+			fmt.Println("deleting file/directory :", deletedPath)
+			err := os.RemoveAll(deletedPath)
+			if err != nil {
+				return fmt.Errorf("could not trash file: %w", err)
+			}
+
+			err = os.Rename(fullPath, deletedPath)
+			if err != nil {
+				log.Println(err, "Trash file existing error")
+				return fmt.Errorf("Trash file existing error: %w", err)
+			}
+			return nil
+		}
+		log.Println(err, "error while moving it to trash")
 		return fmt.Errorf("could not move to trash: %w", err)
 	}
 

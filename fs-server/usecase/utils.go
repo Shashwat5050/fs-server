@@ -304,14 +304,22 @@ func (fm *FileManager) checkZipAndExtract(zipPath, extractionPath string) error 
 
 func (fm *FileManager) copyDirectory(src, dest string) error {
 	// Create the destination directory
-	err := os.MkdirAll(dest, os.ModePerm)
+	err := os.MkdirAll(dest, 0755)
 	if err != nil {
+		fmt.Println("Error while making directory :", err.Error())
+		return err
+	}
+
+	err = os.Chmod(dest, 0777) // Change permissions to rwxrwxrwx
+	if err != nil {
+		fmt.Println("Error while making directory :", err.Error())
 		return err
 	}
 
 	// Read the contents of the source directory
 	entries, err := os.ReadDir(src)
 	if err != nil {
+		fmt.Println("Error while reading entries of dir :", err.Error())
 		return err
 	}
 
@@ -322,11 +330,13 @@ func (fm *FileManager) copyDirectory(src, dest string) error {
 		if entry.IsDir() {
 			// Recursively copy subdirectory
 			if err := fm.copyDirectory(srcEntry, destEntry); err != nil {
+				fmt.Println("Error while copy directory furthur :", err.Error())
 				return err
 			}
 		} else {
 			// Copy the file
 			if err := fm.copyFile(srcEntry, destEntry); err != nil {
+				fmt.Println("Error while copy file :", err.Error())
 				return err
 			}
 		}
