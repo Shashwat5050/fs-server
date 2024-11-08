@@ -344,3 +344,19 @@ func (fm *FileManager) copyDirectory(src, dest string) error {
 
 	return nil
 }
+
+// Copy permissions also while Copy Files/Folder
+func copyFilePermissions(sourcePath, destPath string) error {
+	sourceFileInfo, err := os.Stat(sourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to get source file info: %v", err)
+	}
+
+	// Copy permissions
+	err = os.Chmod(destPath, sourceFileInfo.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to set permissions on %s: %v", destPath, err)
+	}
+
+	return nil
+}

@@ -229,7 +229,7 @@ func (fm *FileManager) CreateDir(path, name string) error {
 		return err
 	}
 
-	return os.Mkdir(path, 0750)
+	return os.Mkdir(path, 0770)
 }
 
 func (fm *FileManager) DownloadFile(path, name string) (int64, io.ReadCloser, error) {
@@ -256,19 +256,13 @@ func (fm *FileManager) DownloadFile(path, name string) (int64, io.ReadCloser, er
 }
 
 func (fm *FileManager) UploadFile(ctx context.Context, path, filename string, data io.Reader) error {
-	path = filepath.Join(fm.VolumeDir, path)
-	if err := fm.validatePath(path); err != nil {
-		return err
-	}
-
-	path = filepath.Join(path, filename)
 
 	buf := make([]byte, 1024)
-	fd, err := os.Create(filepath.Clean(path))
+
+	fd, err := fm.CreateFile(path, filename)
 	if err != nil {
 		return err
 	}
-
 	defer fd.Close()
 
 	for {
@@ -298,7 +292,19 @@ func (fm *FileManager) CreateFile(path, filename string) (io.WriteCloser, error)
 		return nil, err
 	}
 
-	return os.Create(filepath.Clean(path))
+	file, err := os.Create(filepath.Clean(path))
+	if err != nil {
+		return nil, err
+	}
+
+	// Change the file permissions to 770 (rw-rw----)
+	if err := os.Chmod(path, 0770); err != nil {
+		file.Close()
+		return nil, err
+	}
+	fmt.Println("Changes file permissions")
+
+	return file, err
 }
 
 func (fm *FileManager) DeleteFile(path, filename string) error {
@@ -420,6 +426,11 @@ func (fm *FileManager) CopyFile(path, filename, newPath, newName string) error {
 	defer src.Close()
 
 	dst, err := os.Create(filepath.Clean(newPath))
+	if err != nil {
+		return err
+	}
+
+	err = copyFilePermissions(path, newPath)
 	if err != nil {
 		return err
 	}
